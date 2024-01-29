@@ -20,58 +20,93 @@
   </style>
 </head>
 <body>
-  <section id="map"></section>
+  <section class="section-map">
+    <div id="map"></div>
+  </section>
 
   <!-- Leaflet JavaScript -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script>
+    // DOM
+    const MAP = document.getElementById("map");
+
+
     // Initial setup
-    var map = L.map('map').fitWorld();
-    var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 20,
-      attribution: '&copy; <a href="https://www.openstreetmap.org">OpenStreetMap</a>'
-    }).addTo(map);
+    let map = L
+      .map(MAP)
+      .fitWorld()
+      .locate({ watch: true, setView: true });
 
-    var marker;
-    var circle;
-    var lastLatlng;
+    let tile = L
+      .tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        noWrap: true,
+        maxZoom: 18.5,
+        attribution: '&copy; <a href="https://www.openstreetmap.org" target="_blank">OpenStreetMap</a>',
+      })
+      .addTo(map);
 
-    if (!navigator.geolocation) {
-      map.locate({setView: true, maxZoom: 20});
-    } else {
-      map.locate({watch: true, setView: true, maxZoom: 20});
-      map.on('locationfound', (event) => {
-        if (marker) map.removeLayer(marker);
-        if (circle) map.removeLayer(circle);
+    // Var variables
+    let marker;
+    let circle;
+    let currentZoom = null;
+    let currentCenter = null;
+    let lastLatlng = null;
 
-        marker = L.marker(event.latlng).addTo(map);
-        circle = L.circle(event.latlng, event.accuracy).addTo(map);
-        var featureGroup = L.featureGroup([marker, circle]).addTo(map);
+    map.on('locationfound', (event) => {
+      let ACCURACY = event.accuracy;
+      // If the current center is null, it will point on the location itself,
+      // or else the map frame will change to the current frame user is viewing.
+      currentCenter === null
+        ? currentCenter = event.latlng
+        : currentCenter;
 
-        map.fitBounds(featureGroup.getBounds());
+      // Remove both marker and circle if there are unupdated ones.
+      // This prevents the map frame frame from duplicate or double markers and circles.
+      if (marker) map.removeLayer(marker);
+      if (circle) map.removeLayer(circle);
+      marker = L.marker(event.latlng).addTo(map);
+      circle = L.circle(event.latlng, ACCURACY).addTo(map);
 
-        listenEvents();
-        drawPolyline(event.latlng);
-      });
-      map.on('locationerror', () => {
-        map.locate({ setView: true, maxZoom: 20 });
-      });
-    }
+      var featureGroup = L.featureGroup([marker, circle]).addTo(map);
+      // If the current zoom is null, the zoom will be the same as it was.
+      // Else, zoom will be the latest scale the user has used.
+      currentZoom === null
+        ? map.fitBounds(featureGroup.getBounds())
+        : map.setView(currentCenter, currentZoom);
 
+      listenEvents();
+      drawPolyline(event.latlng);
+    });
+
+    map.on('locationerror', () => {});
+
+    // Function that listen every events from the map
+    // It includes 'user zooming the map', 'dragging the map location'
     function listenEvents() {
-      //
+      // Zooming
+      map.on('zoom', () => {
+        currentZoom = map.getZoom();
+      });
+
+      // Dragging
+      map.on('drag', () => {
+        currentCenter = map.getCenter();
+      });
     }
 
+    // Function that draw poly lines in order to track the routes of user path
     function drawPolyline(latlng) {
-      var polyline;
+      let polylines = [];
+      let polyline;
 
-      if (lastLatlng) {
-        const POLYLINE = [lastLatlng, Object.values(latlng)];
-        polyline = L.polyline(POLYLINE, { color: 'red' }).addTo(map);
+      if (lastLatlng !== null) {
+        polylines = [lastLatlng, Object.values(latlng)];
+        polyline = L.polyline(polylines, { color: 'red' }).addTo(map);
         lastLatlng = Object.values(latlng);
       } else {
         lastLatlng = latlng;
-        polyline = L.polyline([lastLatlng, lastLatlng], { color: 'red' }).addTo(map);
+        polylines = [lastLatlng, lastLatlng];
+        polyline = L.polyline(polylines, { color: 'red' }).addTo(map);
       }
     }
   </script>
