@@ -28,7 +28,7 @@
     // Initial setup
     var map = L.map('map').fitWorld();
     var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
+      maxZoom: 20,
       attribution: '&copy; <a href="https://www.openstreetmap.org">OpenStreetMap</a>'
     }).addTo(map);
 
@@ -37,9 +37,9 @@
     var lastLatlng;
 
     if (!navigator.geolocation) {
-      map.locate({setView: true, maxZoom: 16});
+      map.locate({setView: true, maxZoom: 20});
     } else {
-      map.locate({watch: true, setView: true, maxZoom: 16});
+      map.locate({watch: true, setView: true, maxZoom: 20});
       map.on('locationfound', (event) => {
         if (marker) map.removeLayer(marker);
         if (circle) map.removeLayer(circle);
@@ -49,24 +49,28 @@
         var featureGroup = L.featureGroup([marker, circle]).addTo(map);
 
         map.fitBounds(featureGroup.getBounds());
+
+        listenEvents();
         drawPolyline(event.latlng);
       });
       map.on('locationerror', () => {
-        map.locate({ setView: true, maxZoom: 16 });
+        map.locate({ setView: true, maxZoom: 20 });
       });
+    }
+
+    function listenEvents() {
+      //
     }
 
     function drawPolyline(latlng) {
       var polyline;
-      var lastLatlng;
-      let currentLatlng = Object.values(latlng);
 
       if (lastLatlng) {
-        const POLYLINE = [lastLatlng, currentLatlng];
+        const POLYLINE = [lastLatlng, Object.values(latlng)];
         polyline = L.polyline(POLYLINE, { color: 'red' }).addTo(map);
-        lastLatlng = currentLatlng;
+        lastLatlng = Object.values(latlng);
       } else {
-        lastLatlng = currentLatlng;
+        lastLatlng = latlng;
         polyline = L.polyline([lastLatlng, lastLatlng], { color: 'red' }).addTo(map);
       }
     }
